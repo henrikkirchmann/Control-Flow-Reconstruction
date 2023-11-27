@@ -1,0 +1,6 @@
+pm4py==2.2.32
+matplotlib==3.6.2
+numpy==1.23.5
+pandas==1.5.1
+seaborn==0.12.1
+pyemd==1.0.0
