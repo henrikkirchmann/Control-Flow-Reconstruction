@@ -9,7 +9,6 @@ import pm4py
 import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib import rc
-from pm4py.algo.discovery.inductive import algorithm as inductive_miner
 from pm4py.algo.evaluation.earth_mover_distance import algorithm as emd_evaluator
 from pm4py.objects.log.importer.xes import importer as xes_importer
 from pm4py.statistics.variants.log import get as variants_module
@@ -233,17 +232,16 @@ for strategy in strategies:
     numberOfTraceLengthsList = getTraceLengthsList(generatedLogList)
     numberOfTraceLengthsListStrategies.append(list(itertools.chain.from_iterable(numberOfTraceLengthsList)))
     numberOfTraceLengthsListOriginalLog = getTraceLengthsList(originalLogList)
-    print("----NHI----")
+    print("----NHI Size----")
     nhi = str(
         getAvgHistoOverlap(numberOfTraceLengthsListOriginalLog, [numberOfTraceLengthsListStrategies[-1]], numberOfLogs)[
             0])
     print("NHI of the original Log and " + str(numberOfLogs[-1]) + " generated Logs is: " + str(nhi))
 
     # Intersection with multi sets
-
+    print("----Multi Set Intersection----")
     multiSetIntersectionSizeList = getMultiSetIntersection(generatedLogList, originalLogList[0])
     multiSetIntersectionSizeListStrategies.append(multiSetIntersectionSizeList)
-    print("----Multi Set Intersection----")
     for i in numberOfLogs:
         print("Average Size of the Multi Set Intersection with the original Log in " + str(
             i) + " generated Logs is: " + str(getAvgOfList(multiSetIntersectionSizeList, i)))
@@ -254,10 +252,9 @@ for strategy in strategies:
 
     # EMD
     # If you are not interested in EMD and want to improve your performance, please comment out this part.
-
+    print("----EMD----")
     emdList = getEMD(generatedEventLogList, log)
     emdListStrategies.append(emdList)
-    print("----EMD----")
     for i in numberOfLogs:
         print("Average EMD of the original Log and " + str(i) + " generated Logs is: " + str(getAvgOfList(emdList, i)))
         print("Maximum EMD of the original Log and " + str(i) + " generated Logs is: " + str(getMaxOfList(emdList, i)))

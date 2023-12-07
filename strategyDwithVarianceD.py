@@ -273,26 +273,8 @@ def process_closed(closed_node, enabled, open, closed, execution_sequence, varia
                     if vertexChildren[1].eventFreq == 0 and closed_node == vertexChildren[1]:
                         enable = vertex.children[0]
                     else:
-                        probability_distribution = list()
-                        ''' 
-                        for child in vertexChildren:
-                            probability_distribution.append(child.eventFreq)
-                        '''
-                        '''
-                        expectedNumberOfLoops = (vertex.children[0].eventFreq / vertex.eventFreq) - 1
-                        p = symbols('p')
-                        probabilityOfNoRightChild = solveset(1 / p - expectedNumberOfLoops, p).args[0]
-                        probabilityOfRightChild = 1 - probabilityOfNoRightChild
-                        weights = [probabilityOfRightChild, probabilityOfNoRightChild]
-                        '''
-                        prOfNoRepeat = vertex.eventFreq / vertex.children[0].eventFreq
-                        r = random.random()
-                        # weights = vertex.loopdistribution
-                        population = [1, 2]
-
                         # if we executed left child and have a choice to execute right child, make a random choice to execute right child or end loop
                         if vertex.children.index(closed_node) == 0:
-                            # """
                             if vertex.loopCountLaplace is None:
                                 vertex.loopCountLaplace = -1
                                 while vertex.loopCountLaplace < 0:
@@ -305,15 +287,6 @@ def process_closed(closed_node, enabled, open, closed, execution_sequence, varia
                                 enable = vertex.children[2]
                                 vertex.loopCount = 0
                                 vertex.loopCountLaplace = None
-                            # """
-                            # c = random.choices(population=population, weights=weights, k=1)
-                            # enable = vertex.children[c[0]]
-                            '''
-                            if r > prOfNoRepeat:
-                                enable = vertex.children[1]
-                            else:
-                                enable = vertex.children[2]
-                            '''
                         else:
                             enable = vertex.children[0]
             if enable is not None:
