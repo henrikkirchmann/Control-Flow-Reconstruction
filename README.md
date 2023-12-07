@@ -22,3 +22,6 @@ See the "requirements.txt" file, we used Python 3.10.
 
 5. Run the evaluation.py file.
 
+# Appendix
+
+In the Appendix folder, the plots for the trace length distributions of the other event logs can be found.
