@@ -3,11 +3,12 @@
 # Requirements
 See the "requirements.txt" file, we used Python 3.10.
 # How To Use
-1. Put the XES file of the event log you want to evaluate in the same directory as this file. 
 
-2. Set in evaluation.py line 184 `logName` to the name of the XES file of the log we want to evaluate.
+1. Just put the XES file of the event log you want to evaluate in the folder of this project, like the `BPIC 2013 Closed Problems.xes`. 
 
-    Example. We want to import the "BPIC 2013 Closed Problems.xes" file:
+2. Set in evaluation.py line 185 `logName` to the name of the XES file of the log we would like to evaluate.
+
+    Example. We would like to import the "BPIC 2013 Closed Problems.xes" file:
 
    `logName = 'BPIC 2013 Closed Problems'` 
 
@@ -15,8 +16,9 @@ See the "requirements.txt" file, we used Python 3.10.
 
     Example. When each play-out strategy should generate should reconstruct 100 logs from a process tree we type:
 
-   `numberOfLogs = [100]` 
+   `numberOfLogs = [100]`
 
-4. Run the evaluation.py file.
+4. Optionally: If you want a better run time, comment out the computation of the EMD, lines 255-263. 
 
+5. Run the evaluation.py file.
 
