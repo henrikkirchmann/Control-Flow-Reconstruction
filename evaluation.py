@@ -252,6 +252,7 @@ for strategy in strategies:
 
     # EMD
     # If you are not interested in EMD and want to improve your performance, please comment out this part.
+    #'''
     print("----EMD----")
     emdList = getEMD(generatedEventLogList, log)
     emdListStrategies.append(emdList)
@@ -259,7 +260,7 @@ for strategy in strategies:
         print("Average EMD of the original Log and " + str(i) + " generated Logs is: " + str(getAvgOfList(emdList, i)))
         print("Maximum EMD of the original Log and " + str(i) + " generated Logs is: " + str(getMaxOfList(emdList, i)))
         print("Minimum EMD of the original Log and " + str(i) + " generated Logs is: " + str(getMinOfList(emdList, i)))
-
+    #'''
 
 #########################################
 # Histogram of Trace Lengths
