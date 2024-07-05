@@ -3,6 +3,8 @@ import itertools
 import os
 from collections import Counter as mset
 from pathlib import Path
+from typing import List
+from collections import defaultdict
 
 import pandas as pd
 import pm4py
@@ -72,7 +74,7 @@ def getLogs(processTree, numberOfLogsToGenerate, numberOfCasesInOriginalLog, str
             log, eventlog = generateLogMA(processTreeCopy, numberOfCasesInOriginalLog)
         generatedLogList.append(log)
         generatedEventLogList.append(eventlog)
-        print("All play-outs are generated")
+    print("All play-outs are generated")
 
     return generatedLogList, generatedEventLogList
 
@@ -119,6 +121,92 @@ def getEMD(generatedEventLogList, originalEventLog):
         emd = emd_evaluator.apply(generatedLogLanguage, originalLogLanguage)
         emdList.append(emd)
     return emdList
+
+
+def get_alphabet(log: List[List[str]]) -> List[str]:
+    unique_activities = set()
+    for trace in log:
+        for activity in trace:
+            unique_activities.add(activity)
+    return list(unique_activities)
+
+def get_eventual_follows_relations_between_activities_dict(log, alphabet):
+    # 0 = Never Follows
+    # 1 = Sometimes Follows
+    # 2 = Always Follows
+    # 3 = Initialize
+    # eventual_follows_relations_dict[a][b] = 2 --> b does always eventual follow a
+    eventual_follows_relations_dict = defaultdict(lambda: defaultdict(int))
+    for a in alphabet:
+        for b in alphabet:
+            eventual_follows_relations_dict[a][b] = 3
+
+    saw_activity_before_dict = defaultdict()
+    for activity in alphabet:
+        saw_activity_before_dict[activity] = False
+
+    for trace in log:
+        i = 0
+        trace_len = len(trace)
+        for activity in trace:
+            if i != trace_len:
+                following_activities_set = set()
+                for following_activitiy in trace[i+1:]:
+                    following_activities_set.add(following_activitiy)
+                    #when we see a eventual_follows relation, change relation based on observed relation before
+                    if eventual_follows_relations_dict[activity][following_activitiy] == 0:
+                        eventual_follows_relations_dict[activity][following_activitiy] = 1
+                    #elif eventual_follows_relations_dict[activity][following_activitiy] == 1 & 2 --> nothing todo
+                    elif eventual_follows_relations_dict[activity][following_activitiy] == 3:
+                        eventual_follows_relations_dict[activity][following_activitiy] = 2
+                for key in eventual_follows_relations_dict[activity].keys():
+                    # change the initialized value to never follows for all relations we have not seen when seeing an activity for the first time
+                    if eventual_follows_relations_dict[activity][key] == 3:
+                        eventual_follows_relations_dict[activity][key] = 0
+                    # change all always follow relations to sometimes follow relations of relations that did not happen in this trace but are classified as always follow realtions
+                    elif eventual_follows_relations_dict[activity][key] == 2:
+                        if key not in following_activities_set:
+                            eventual_follows_relations_dict[activity][key] == 1
+            i += 1
+    return {k: dict(v) for k, v in eventual_follows_relations_dict.items()}  # Convert inner defaultdicts to regular dicts
+
+
+def compare_eventual_follows_relations(eventual_follows_relations_generated_log, eventual_follows_relations_original_log):
+    # 0 = Never Follows
+    # 1 = Sometimes Follows
+    # 2 = Always Follows
+    # 3 = Initialize
+    # eventual_follows_relations_dict[a][b] = 2 --> b does always eventual follow a
+    never_follows_count_original = 0
+    never_follows_matching_count = 0
+    sometimes_follows_count_original = 0
+    sometimes_follows_matching_count= 0
+    always_follows_count_original = 0
+    always_follows_matching_count= 0
+    for activity in eventual_follows_relations_original_log.keys():
+        for activity_follows in eventual_follows_relations_original_log[activity].keys():
+            original_relation =  eventual_follows_relations_original_log[activity][activity_follows]
+            reconstructed_relation = eventual_follows_relations_generated_log[activity][activity_follows]
+            if original_relation == reconstructed_relation:
+                if original_relation == 0:
+                    never_follows_matching_count += 1
+                elif original_relation == 1:
+                    sometimes_follows_matching_count += 1
+                elif original_relation == 2:
+                    always_follows_matching_count += 1
+            if original_relation == 0:
+                never_follows_count_original += 1
+            elif original_relation == 1:
+                sometimes_follows_count_original += 1
+            elif original_relation == 2:
+                always_follows_count_original += 1
+
+    return  never_follows_count_original, never_follows_matching_count, sometimes_follows_count_original, sometimes_follows_matching_count, always_follows_count_original, always_follows_matching_count
+
+
+
+
+
 
 
 def transfromTraceLengthsToDataframesHistograms(originalTL: list[list], generatedTLs: list[list], numberOfLogs: list,
@@ -176,14 +264,16 @@ def getAvgHistoOverlap(traceLengthsOG: [[]], traceLengthsListStrategies: [[]], n
     return avgHistoOverlap
 
 
+
+
 # BPIC 2015 Municipality 1
 # BPIC 2017
 # Sepsis Cases
 # BPIC 2013 Closed Problems
 
 ###########################################
-logName = "BPIC 2013 Closed Problems"
-numberOfLogs = [1]
+logName = "BPIC15_1"
+numberOfLogs = [100]
 ###########################################
 
 abspath = os.path.abspath(__file__)
@@ -214,9 +304,16 @@ strategies.append(
 numberOfTraceVariantListStrategies = list()
 numberOfTraceLengthsListStrategies = list()
 multiSetIntersectionSizeListStrategies = list()
+eventuallyFollowsListStrategies = list()
 emdListStrategies = list()
 varianceCounter = 0
 maxTraceLength = getLengthOfLongestTrace(log)
+
+#for eventual follows relation evaluation
+control_flow_original_log = transformLogToTraceStringList(log)
+alphabet_original_log = get_alphabet(control_flow_original_log)
+eventual_follows_relations_original_log = get_eventual_follows_relations_between_activities_dict(
+    control_flow_original_log, alphabet_original_log)
 
 for strategy in strategies:
     generatedLogList, generatedEventLogList = getLogs(processTreeFreq, numberOfLogs[-1], numberOfCasesInOriginalLog,
@@ -228,7 +325,7 @@ for strategy in strategies:
     originalLogList.append(transformLogToTraceStringList(log))
 
     # Trace Lengths
-
+    ''' 
     numberOfTraceLengthsList = getTraceLengthsList(generatedLogList)
     numberOfTraceLengthsListStrategies.append(list(itertools.chain.from_iterable(numberOfTraceLengthsList)))
     numberOfTraceLengthsListOriginalLog = getTraceLengthsList(originalLogList)
@@ -249,10 +346,10 @@ for strategy in strategies:
             i) + " generated Logs is: " + str(getMaxOfList(multiSetIntersectionSizeList, i)))
         print("Minimum Size of the Multi Set Intersection with the original Log in " + str(
             i) + " generated Logs is: " + str(getMinOfList(multiSetIntersectionSizeList, i)))
-
+    '''
     # EMD
     # If you are not interested in EMD and want to improve your performance, please comment out this part.
-    #'''
+    '''
     print("----EMD----")
     emdList = getEMD(generatedEventLogList, log)
     emdListStrategies.append(emdList)
@@ -260,12 +357,49 @@ for strategy in strategies:
         print("Average EMD of the original Log and " + str(i) + " generated Logs is: " + str(getAvgOfList(emdList, i)))
         print("Maximum EMD of the original Log and " + str(i) + " generated Logs is: " + str(getMaxOfList(emdList, i)))
         print("Minimum EMD of the original Log and " + str(i) + " generated Logs is: " + str(getMinOfList(emdList, i)))
-    #'''
+    '''
+
+    #Eventually Follows Relation
+    print("----Eventually Follows Relation----")
+
+    eventually_follows_matching_count_list = list()
+    never_follows_matching_count_list = list()
+    sometimes_follows_matching_count_list = list()
+    always_follows_matching_count_list = list()
+
+    for event_log in generatedLogList:
+        eventual_follows_relations_generated_log = get_eventual_follows_relations_between_activities_dict(event_log, alphabet_original_log)
+        never_follows_count_original, never_follows_matching_count, sometimes_follows_count_original, sometimes_follows_matching_count, always_follows_count_original, always_follows_matching_count = compare_eventual_follows_relations(eventual_follows_relations_generated_log, eventual_follows_relations_original_log)
+
+        never_follows_matching_count_list.append(never_follows_matching_count)
+        sometimes_follows_matching_count_list.append(sometimes_follows_matching_count)
+        always_follows_matching_count_list.append(always_follows_matching_count)
+
+        eventually_follows_matching_count_list.append(never_follows_matching_count+sometimes_follows_matching_count+always_follows_matching_count)
+
+    average_never_follows_matching_count = getAvgOfList(never_follows_matching_count_list, len(never_follows_matching_count_list))
+    average_sometimes_follows_matching_count = getAvgOfList(sometimes_follows_matching_count_list,len(sometimes_follows_matching_count_list))
+    average_always_follows_matching_count = getAvgOfList(always_follows_matching_count_list, len(always_follows_matching_count_list))
+
+    average_percentage_never_follows_matching = average_never_follows_matching_count / never_follows_count_original
+    average_percentage_sometimes_follows_matching = average_sometimes_follows_matching_count / sometimes_follows_count_original
+    average_percentage_always_follows_matching = average_always_follows_matching_count / always_follows_count_original
+
+    all_average_reconstructed_follows_relation_count = average_never_follows_matching_count + average_sometimes_follows_matching_count + average_always_follows_matching_count
+
+
+    print("Average Percentage of Reconstructed Eventually Follows Relations: " + str((all_average_reconstructed_follows_relation_count / (len(alphabet_original_log)*len(alphabet_original_log)))) + " (" + str(all_average_reconstructed_follows_relation_count) + " out of " + str(len(alphabet_original_log)*len(alphabet_original_log)) + ")")
+    print("Average Percentage of reconstructed Eventually Always Follows Relations: " + str(average_percentage_never_follows_matching) + " (" + str(average_never_follows_matching_count) + " out of " + str(never_follows_count_original) + ")")
+    print("Average Percentage of reconstructed Eventually Sometimes Follows Relations: " + str(average_percentage_sometimes_follows_matching) + " (" + str(average_sometimes_follows_matching_count) + " out of " + str(sometimes_follows_count_original) + ")")
+    print("Average Percentage of reconstructed Eventually Never Follows Relations: " + str(average_percentage_always_follows_matching) + " (" + str(average_always_follows_matching_count) + " out of " + str(always_follows_count_original) + ")")
+
+
+
 
 #########################################
 # Histogram of Trace Lengths
 #########################################
-
+'''
 # x-axis cut off for better visulasation
 if logName == 'BPIC 2017':
     maxLength = 100
@@ -311,3 +445,4 @@ plt.savefig("pdf/" + logName + "/Histogram/" + str(numberOfLogs[-1]) + ".pdf", f
 plt.savefig("png/" + logName + "/Histogram/" + str(numberOfLogs[-1]) + ".png", format="png", dpi=300,
             transparent=True)
 plt.show()
+'''
