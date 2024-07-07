@@ -130,6 +130,7 @@ def get_alphabet(log: List[List[str]]) -> List[str]:
             unique_activities.add(activity)
     return list(unique_activities)
 
+
 def get_eventual_follows_relations_between_activities_dict(log, alphabet):
     # 0 = Never Follows
     # 1 = Sometimes Follows
@@ -151,7 +152,7 @@ def get_eventual_follows_relations_between_activities_dict(log, alphabet):
         for activity in trace:
             if i != trace_len:
                 following_activities_set = set()
-                for following_activitiy in trace[i+1:]:
+                for following_activitiy in trace[i + 1:]:
                     following_activities_set.add(following_activitiy)
                     #when we see a eventual_follows relation, change relation based on observed relation before
                     if eventual_follows_relations_dict[activity][following_activitiy] == 0:
@@ -168,10 +169,12 @@ def get_eventual_follows_relations_between_activities_dict(log, alphabet):
                         if key not in following_activities_set:
                             eventual_follows_relations_dict[activity][key] == 1
             i += 1
-    return {k: dict(v) for k, v in eventual_follows_relations_dict.items()}  # Convert inner defaultdicts to regular dicts
+    return {k: dict(v) for k, v in
+            eventual_follows_relations_dict.items()}  # Convert inner defaultdicts to regular dicts
 
 
-def compare_eventual_follows_relations(eventual_follows_relations_generated_log, eventual_follows_relations_original_log):
+def compare_eventual_follows_relations(eventual_follows_relations_generated_log,
+                                       eventual_follows_relations_original_log):
     # 0 = Never Follows
     # 1 = Sometimes Follows
     # 2 = Always Follows
@@ -180,12 +183,12 @@ def compare_eventual_follows_relations(eventual_follows_relations_generated_log,
     never_follows_count_original = 0
     never_follows_matching_count = 0
     sometimes_follows_count_original = 0
-    sometimes_follows_matching_count= 0
+    sometimes_follows_matching_count = 0
     always_follows_count_original = 0
-    always_follows_matching_count= 0
+    always_follows_matching_count = 0
     for activity in eventual_follows_relations_original_log.keys():
         for activity_follows in eventual_follows_relations_original_log[activity].keys():
-            original_relation =  eventual_follows_relations_original_log[activity][activity_follows]
+            original_relation = eventual_follows_relations_original_log[activity][activity_follows]
             reconstructed_relation = eventual_follows_relations_generated_log[activity][activity_follows]
             if original_relation == reconstructed_relation:
                 if original_relation == 0:
@@ -201,11 +204,79 @@ def compare_eventual_follows_relations(eventual_follows_relations_generated_log,
             elif original_relation == 2:
                 always_follows_count_original += 1
 
-    return  never_follows_count_original, never_follows_matching_count, sometimes_follows_count_original, sometimes_follows_matching_count, always_follows_count_original, always_follows_matching_count
+    return never_follows_count_original, never_follows_matching_count, sometimes_follows_count_original, sometimes_follows_matching_count, always_follows_count_original, always_follows_matching_count
 
 
+def compare_eventual_follows_relations_fp_fn(eventual_follows_relations_generated_log,
+                                             eventual_follows_relations_original_log):
+    # 0 = Never Follows
+    # 1 = Sometimes Follows
+    # 2 = Always Follows
+    # 3 = Initialize
+    # eventual_follows_relations_dict[a][b] = 2 --> b does always eventual follow a
+    never_follows_count_original = 0
+    never_follows_matching_count = 0
+    never_follows_matching_count_fp = 0
+    never_follows_matching_count_fn = 0
+
+    sometimes_follows_count_original = 0
+    sometimes_follows_matching_count = 0
+    sometimes_follows_matching_count_fp = 0
+    sometimes_follows_matching_count_fn = 0
+
+    always_follows_count_original = 0
+    always_follows_matching_count = 0
+    always_follows_matching_count_fp = 0
+    always_follows_matching_count_fn = 0
+
+    for activity in eventual_follows_relations_original_log.keys():
+        for activity_follows in eventual_follows_relations_original_log[activity].keys():
+            original_relation = eventual_follows_relations_original_log[activity][activity_follows]
+            reconstructed_relation = eventual_follows_relations_generated_log[activity][activity_follows]
+
+            if original_relation == reconstructed_relation:
+                if original_relation == 0:
+                    never_follows_matching_count += 1
+                elif original_relation == 1:
+                    sometimes_follows_matching_count += 1
+                elif original_relation == 2:
+                    always_follows_matching_count += 1
+
+            if original_relation == 0:
+                never_follows_count_original += 1
+                if original_relation != reconstructed_relation:
+                    never_follows_matching_count_fn += 1
+                    if reconstructed_relation == 1:
+                        sometimes_follows_matching_count_fp += 1
+                    elif reconstructed_relation == 2:
+                        always_follows_matching_count_fp += 1
+            elif original_relation == 1:
+                sometimes_follows_count_original += 1
+                if original_relation != reconstructed_relation:
+                    sometimes_follows_matching_count_fn += 1
+                    if reconstructed_relation == 0:
+                        never_follows_matching_count_fp += 1
+                    elif reconstructed_relation == 2:
+                        always_follows_matching_count_fp += 1
+            elif original_relation == 2:
+                always_follows_count_original += 1
+                if original_relation != reconstructed_relation:
+                    always_follows_matching_count_fn += 1
+                    if reconstructed_relation == 0:
+                        never_follows_matching_count_fp += 1
+                    elif reconstructed_relation == 1:
+                        sometimes_follows_matching_count_fp += 1
+
+    #compute f1 scores
+    #f1 =  2tp / (2tp + fp + fn)
+
+    f1_never_follows = 2 * never_follows_matching_count / (2 * never_follows_matching_count + never_follows_matching_count_fp + never_follows_matching_count_fn)
+    f1_sometimes_follows = 2 * sometimes_follows_matching_count / (2 * sometimes_follows_matching_count + sometimes_follows_matching_count_fp + sometimes_follows_matching_count_fn)
+    f1_always_follows = 2 * always_follows_matching_count / (2 * always_follows_matching_count + always_follows_matching_count_fp + always_follows_matching_count_fn)
+    f1_all = 2 * (never_follows_matching_count+sometimes_follows_matching_count+always_follows_matching_count) / (2 * (never_follows_matching_count+sometimes_follows_matching_count+always_follows_matching_count) + never_follows_matching_count_fp + sometimes_follows_matching_count_fp + always_follows_matching_count_fp + never_follows_matching_count_fn +  sometimes_follows_matching_count_fn + always_follows_matching_count_fn)
 
 
+    return never_follows_count_original, never_follows_matching_count, sometimes_follows_count_original, sometimes_follows_matching_count, always_follows_count_original, always_follows_matching_count, f1_never_follows, f1_sometimes_follows, f1_always_follows, f1_all
 
 
 
@@ -264,16 +335,14 @@ def getAvgHistoOverlap(traceLengthsOG: [[]], traceLengthsListStrategies: [[]], n
     return avgHistoOverlap
 
 
-
-
 # BPIC 2015 Municipality 1
 # BPIC 2017
 # Sepsis Cases
 # BPIC 2013 Closed Problems
 
 ###########################################
-logName = "BPIC15_1"
-numberOfLogs = [100]
+logName = "BPIC 2013 Closed Problems"
+numberOfLogs = [1]
 ###########################################
 
 abspath = os.path.abspath(__file__)
@@ -367,19 +436,39 @@ for strategy in strategies:
     sometimes_follows_matching_count_list = list()
     always_follows_matching_count_list = list()
 
+    f1_always_follows_list = list()
+    f1_sometimes_follows_list = list()
+    f1_never_follows_list = list()
+    f1_all_list = list()
+
     for event_log in generatedLogList:
-        eventual_follows_relations_generated_log = get_eventual_follows_relations_between_activities_dict(event_log, alphabet_original_log)
-        never_follows_count_original, never_follows_matching_count, sometimes_follows_count_original, sometimes_follows_matching_count, always_follows_count_original, always_follows_matching_count = compare_eventual_follows_relations(eventual_follows_relations_generated_log, eventual_follows_relations_original_log)
+        eventual_follows_relations_generated_log = get_eventual_follows_relations_between_activities_dict(event_log,
+                                                                                                          alphabet_original_log)
+        #never_follows_count_original, never_follows_matching_count, sometimes_follows_count_original, sometimes_follows_matching_count, always_follows_count_original, always_follows_matching_count = compare_eventual_follows_relations(
+        #    eventual_follows_relations_generated_log, eventual_follows_relations_original_log)
+
+        never_follows_count_original, never_follows_matching_count, sometimes_follows_count_original, sometimes_follows_matching_count, always_follows_count_original, always_follows_matching_count, f1_never_follows, f1_sometimes_follows, f1_always_follows, f1_all = compare_eventual_follows_relations_fp_fn(
+            eventual_follows_relations_generated_log, eventual_follows_relations_original_log)
+
 
         never_follows_matching_count_list.append(never_follows_matching_count)
         sometimes_follows_matching_count_list.append(sometimes_follows_matching_count)
         always_follows_matching_count_list.append(always_follows_matching_count)
 
-        eventually_follows_matching_count_list.append(never_follows_matching_count+sometimes_follows_matching_count+always_follows_matching_count)
+        f1_never_follows_list.append(f1_never_follows)
+        f1_sometimes_follows_list.append(f1_sometimes_follows)
+        f1_always_follows_list.append(f1_always_follows)
+        f1_all_list.append(f1_all)
 
-    average_never_follows_matching_count = getAvgOfList(never_follows_matching_count_list, len(never_follows_matching_count_list))
-    average_sometimes_follows_matching_count = getAvgOfList(sometimes_follows_matching_count_list,len(sometimes_follows_matching_count_list))
-    average_always_follows_matching_count = getAvgOfList(always_follows_matching_count_list, len(always_follows_matching_count_list))
+        eventually_follows_matching_count_list.append(
+            never_follows_matching_count + sometimes_follows_matching_count + always_follows_matching_count)
+
+    average_never_follows_matching_count = getAvgOfList(never_follows_matching_count_list,
+                                                        len(never_follows_matching_count_list))
+    average_sometimes_follows_matching_count = getAvgOfList(sometimes_follows_matching_count_list,
+                                                            len(sometimes_follows_matching_count_list))
+    average_always_follows_matching_count = getAvgOfList(always_follows_matching_count_list,
+                                                         len(always_follows_matching_count_list))
 
     average_percentage_never_follows_matching = average_never_follows_matching_count / never_follows_count_original
     average_percentage_sometimes_follows_matching = average_sometimes_follows_matching_count / sometimes_follows_count_original
@@ -387,14 +476,33 @@ for strategy in strategies:
 
     all_average_reconstructed_follows_relation_count = average_never_follows_matching_count + average_sometimes_follows_matching_count + average_always_follows_matching_count
 
-
-    print("Average Percentage of Reconstructed Eventually Follows Relations: " + str((all_average_reconstructed_follows_relation_count / (len(alphabet_original_log)*len(alphabet_original_log)))) + " (" + str(all_average_reconstructed_follows_relation_count) + " out of " + str(len(alphabet_original_log)*len(alphabet_original_log)) + ")")
-    print("Average Percentage of reconstructed Eventually Always Follows Relations: " + str(average_percentage_never_follows_matching) + " (" + str(average_never_follows_matching_count) + " out of " + str(never_follows_count_original) + ")")
-    print("Average Percentage of reconstructed Eventually Sometimes Follows Relations: " + str(average_percentage_sometimes_follows_matching) + " (" + str(average_sometimes_follows_matching_count) + " out of " + str(sometimes_follows_count_original) + ")")
-    print("Average Percentage of reconstructed Eventually Never Follows Relations: " + str(average_percentage_always_follows_matching) + " (" + str(average_always_follows_matching_count) + " out of " + str(always_follows_count_original) + ")")
-
+    average_f1_never_follows = getAvgOfList(f1_never_follows_list,len(f1_never_follows_list))
+    average_f1_sometimes_follows = getAvgOfList(f1_sometimes_follows_list,len(f1_sometimes_follows_list))
+    average_f1_always_follows = getAvgOfList(f1_always_follows_list,len(f1_always_follows_list))
+    average_f1_all = getAvgOfList(f1_all_list,len(f1_all_list))
 
 
+    print("Average Percentage of Reconstructed Eventually Follows Relations: " + str((
+                                                                                                 all_average_reconstructed_follows_relation_count / (
+                                                                                                     len(alphabet_original_log) * len(
+                                                                                                 alphabet_original_log)))) + " (" + str(
+        all_average_reconstructed_follows_relation_count) + " out of " + str(
+        len(alphabet_original_log) * len(alphabet_original_log)) + ")")
+    print("Average Percentage of reconstructed Eventually Always Follows Relations: " + str(
+        average_percentage_never_follows_matching) + " (" + str(
+        average_never_follows_matching_count) + " out of " + str(never_follows_count_original) + ")")
+    print("Average Percentage of reconstructed Eventually Sometimes Follows Relations: " + str(
+        average_percentage_sometimes_follows_matching) + " (" + str(
+        average_sometimes_follows_matching_count) + " out of " + str(sometimes_follows_count_original) + ")")
+    print("Average Percentage of reconstructed Eventually Never Follows Relations: " + str(
+        average_percentage_always_follows_matching) + " (" + str(
+        average_always_follows_matching_count) + " out of " + str(always_follows_count_original) + ")")
+
+    print("-----F1-----")
+    print("F1 All: " + str(average_f1_all))
+    print("F1 Always Follows: " + str(average_f1_always_follows))
+    print("F1 Sometimes Follows: " + str(average_f1_sometimes_follows))
+    print("F1 Never Follows: " + str(average_f1_never_follows))
 
 #########################################
 # Histogram of Trace Lengths
