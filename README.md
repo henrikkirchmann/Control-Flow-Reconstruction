@@ -1,4 +1,4 @@
-# Privacy Risk Induced by Control-Flow Reconstruction from Business Process Models
+# Control-flow Reconstruction Attacks on Business Process Models
 
 # Requirements
 See the "requirements.txt" file for the needed Python packages, please use Python 3.10.
