@@ -2,9 +2,9 @@ import copy
 import itertools
 import os
 from collections import Counter as mset
+from collections import defaultdict
 from pathlib import Path
 from typing import List
-from collections import defaultdict
 
 import pandas as pd
 import pm4py
@@ -154,10 +154,10 @@ def get_eventual_follows_relations_between_activities_dict(log, alphabet):
                 following_activities_set = set()
                 for following_activitiy in trace[i + 1:]:
                     following_activities_set.add(following_activitiy)
-                    #when we see a eventual_follows relation, change relation based on observed relation before
+                    # when we see a eventual_follows relation, change relation based on observed relation before
                     if eventual_follows_relations_dict[activity][following_activitiy] == 0:
                         eventual_follows_relations_dict[activity][following_activitiy] = 1
-                    #elif eventual_follows_relations_dict[activity][following_activitiy] == 1 & 2 --> nothing todo
+                    # elif eventual_follows_relations_dict[activity][following_activitiy] == 1 & 2 --> nothing todo
                     elif eventual_follows_relations_dict[activity][following_activitiy] == 3:
                         eventual_follows_relations_dict[activity][following_activitiy] = 2
                 for key in eventual_follows_relations_dict[activity].keys():
@@ -171,40 +171,6 @@ def get_eventual_follows_relations_between_activities_dict(log, alphabet):
             i += 1
     return {k: dict(v) for k, v in
             eventual_follows_relations_dict.items()}  # Convert inner defaultdicts to regular dicts
-
-
-def compare_eventual_follows_relations(eventual_follows_relations_generated_log,
-                                       eventual_follows_relations_original_log):
-    # 0 = Never Follows
-    # 1 = Sometimes Follows
-    # 2 = Always Follows
-    # 3 = Initialize
-    # eventual_follows_relations_dict[a][b] = 2 --> b does always eventual follow a
-    never_follows_count_original = 0
-    never_follows_matching_count = 0
-    sometimes_follows_count_original = 0
-    sometimes_follows_matching_count = 0
-    always_follows_count_original = 0
-    always_follows_matching_count = 0
-    for activity in eventual_follows_relations_original_log.keys():
-        for activity_follows in eventual_follows_relations_original_log[activity].keys():
-            original_relation = eventual_follows_relations_original_log[activity][activity_follows]
-            reconstructed_relation = eventual_follows_relations_generated_log[activity][activity_follows]
-            if original_relation == reconstructed_relation:
-                if original_relation == 0:
-                    never_follows_matching_count += 1
-                elif original_relation == 1:
-                    sometimes_follows_matching_count += 1
-                elif original_relation == 2:
-                    always_follows_matching_count += 1
-            if original_relation == 0:
-                never_follows_count_original += 1
-            elif original_relation == 1:
-                sometimes_follows_count_original += 1
-            elif original_relation == 2:
-                always_follows_count_original += 1
-
-    return never_follows_count_original, never_follows_matching_count, sometimes_follows_count_original, sometimes_follows_matching_count, always_follows_count_original, always_follows_matching_count
 
 
 def compare_eventual_follows_relations_fp_fn(eventual_follows_relations_generated_log,
@@ -267,17 +233,20 @@ def compare_eventual_follows_relations_fp_fn(eventual_follows_relations_generate
                     elif reconstructed_relation == 1:
                         sometimes_follows_matching_count_fp += 1
 
-    #compute f1 scores
-    #f1 =  2tp / (2tp + fp + fn)
+    # compute f1 scores
+    # f1 =  2tp / (2tp + fp + fn)
 
-    f1_never_follows = 2 * never_follows_matching_count / (2 * never_follows_matching_count + never_follows_matching_count_fp + never_follows_matching_count_fn)
-    f1_sometimes_follows = 2 * sometimes_follows_matching_count / (2 * sometimes_follows_matching_count + sometimes_follows_matching_count_fp + sometimes_follows_matching_count_fn)
-    f1_always_follows = 2 * always_follows_matching_count / (2 * always_follows_matching_count + always_follows_matching_count_fp + always_follows_matching_count_fn)
-    f1_all = 2 * (never_follows_matching_count+sometimes_follows_matching_count+always_follows_matching_count) / (2 * (never_follows_matching_count+sometimes_follows_matching_count+always_follows_matching_count) + never_follows_matching_count_fp + sometimes_follows_matching_count_fp + always_follows_matching_count_fp + never_follows_matching_count_fn +  sometimes_follows_matching_count_fn + always_follows_matching_count_fn)
-
+    f1_never_follows = 2 * never_follows_matching_count / (
+                2 * never_follows_matching_count + never_follows_matching_count_fp + never_follows_matching_count_fn)
+    f1_sometimes_follows = 2 * sometimes_follows_matching_count / (
+                2 * sometimes_follows_matching_count + sometimes_follows_matching_count_fp + sometimes_follows_matching_count_fn)
+    f1_always_follows = 2 * always_follows_matching_count / (
+                2 * always_follows_matching_count + always_follows_matching_count_fp + always_follows_matching_count_fn)
+    f1_all = 2 * (never_follows_matching_count + sometimes_follows_matching_count + always_follows_matching_count) / (
+                2 * (
+                    never_follows_matching_count + sometimes_follows_matching_count + always_follows_matching_count) + never_follows_matching_count_fp + sometimes_follows_matching_count_fp + always_follows_matching_count_fp + never_follows_matching_count_fn + sometimes_follows_matching_count_fn + always_follows_matching_count_fn)
 
     return never_follows_count_original, never_follows_matching_count, sometimes_follows_count_original, sometimes_follows_matching_count, always_follows_count_original, always_follows_matching_count, f1_never_follows, f1_sometimes_follows, f1_always_follows, f1_all
-
 
 
 def transfromTraceLengthsToDataframesHistograms(originalTL: list[list], generatedTLs: list[list], numberOfLogs: list,
@@ -342,7 +311,7 @@ def getAvgHistoOverlap(traceLengthsOG: [[]], traceLengthsListStrategies: [[]], n
 
 ###########################################
 logName = "BPIC 2013 Closed Problems"
-numberOfLogs = [1]
+numberOfLogs = [2]
 ###########################################
 
 abspath = os.path.abspath(__file__)
@@ -378,7 +347,7 @@ emdListStrategies = list()
 varianceCounter = 0
 maxTraceLength = getLengthOfLongestTrace(log)
 
-#for eventual follows relation evaluation
+# for eventual follows relation evaluation
 control_flow_original_log = transformLogToTraceStringList(log)
 alphabet_original_log = get_alphabet(control_flow_original_log)
 eventual_follows_relations_original_log = get_eventual_follows_relations_between_activities_dict(
@@ -394,7 +363,7 @@ for strategy in strategies:
     originalLogList.append(transformLogToTraceStringList(log))
 
     # Trace Lengths
-    ''' 
+
     numberOfTraceLengthsList = getTraceLengthsList(generatedLogList)
     numberOfTraceLengthsListStrategies.append(list(itertools.chain.from_iterable(numberOfTraceLengthsList)))
     numberOfTraceLengthsListOriginalLog = getTraceLengthsList(originalLogList)
@@ -415,10 +384,10 @@ for strategy in strategies:
             i) + " generated Logs is: " + str(getMaxOfList(multiSetIntersectionSizeList, i)))
         print("Minimum Size of the Multi Set Intersection with the original Log in " + str(
             i) + " generated Logs is: " + str(getMinOfList(multiSetIntersectionSizeList, i)))
-    '''
+
     # EMD
     # If you are not interested in EMD and want to improve your performance, please comment out this part.
-    '''
+    # '''
     print("----EMD----")
     emdList = getEMD(generatedEventLogList, log)
     emdListStrategies.append(emdList)
@@ -426,9 +395,9 @@ for strategy in strategies:
         print("Average EMD of the original Log and " + str(i) + " generated Logs is: " + str(getAvgOfList(emdList, i)))
         print("Maximum EMD of the original Log and " + str(i) + " generated Logs is: " + str(getMaxOfList(emdList, i)))
         print("Minimum EMD of the original Log and " + str(i) + " generated Logs is: " + str(getMinOfList(emdList, i)))
-    '''
+    # '''
 
-    #Eventually Follows Relation
+    # Eventually Follows Relation
     print("----Eventually Follows Relation----")
 
     eventually_follows_matching_count_list = list()
@@ -444,12 +413,8 @@ for strategy in strategies:
     for event_log in generatedLogList:
         eventual_follows_relations_generated_log = get_eventual_follows_relations_between_activities_dict(event_log,
                                                                                                           alphabet_original_log)
-        #never_follows_count_original, never_follows_matching_count, sometimes_follows_count_original, sometimes_follows_matching_count, always_follows_count_original, always_follows_matching_count = compare_eventual_follows_relations(
-        #    eventual_follows_relations_generated_log, eventual_follows_relations_original_log)
-
         never_follows_count_original, never_follows_matching_count, sometimes_follows_count_original, sometimes_follows_matching_count, always_follows_count_original, always_follows_matching_count, f1_never_follows, f1_sometimes_follows, f1_always_follows, f1_all = compare_eventual_follows_relations_fp_fn(
             eventual_follows_relations_generated_log, eventual_follows_relations_original_log)
-
 
         never_follows_matching_count_list.append(never_follows_matching_count)
         sometimes_follows_matching_count_list.append(sometimes_follows_matching_count)
@@ -476,16 +441,15 @@ for strategy in strategies:
 
     all_average_reconstructed_follows_relation_count = average_never_follows_matching_count + average_sometimes_follows_matching_count + average_always_follows_matching_count
 
-    average_f1_never_follows = getAvgOfList(f1_never_follows_list,len(f1_never_follows_list))
-    average_f1_sometimes_follows = getAvgOfList(f1_sometimes_follows_list,len(f1_sometimes_follows_list))
-    average_f1_always_follows = getAvgOfList(f1_always_follows_list,len(f1_always_follows_list))
-    average_f1_all = getAvgOfList(f1_all_list,len(f1_all_list))
-
+    average_f1_never_follows = getAvgOfList(f1_never_follows_list, len(f1_never_follows_list))
+    average_f1_sometimes_follows = getAvgOfList(f1_sometimes_follows_list, len(f1_sometimes_follows_list))
+    average_f1_always_follows = getAvgOfList(f1_always_follows_list, len(f1_always_follows_list))
+    average_f1_all = getAvgOfList(f1_all_list, len(f1_all_list))
 
     print("Average Percentage of Reconstructed Eventually Follows Relations: " + str((
-                                                                                                 all_average_reconstructed_follows_relation_count / (
-                                                                                                     len(alphabet_original_log) * len(
-                                                                                                 alphabet_original_log)))) + " (" + str(
+            all_average_reconstructed_follows_relation_count / (
+            len(alphabet_original_log) * len(
+        alphabet_original_log)))) + " (" + str(
         all_average_reconstructed_follows_relation_count) + " out of " + str(
         len(alphabet_original_log) * len(alphabet_original_log)) + ")")
     print("Average Percentage of reconstructed Eventually Always Follows Relations: " + str(
@@ -507,7 +471,7 @@ for strategy in strategies:
 #########################################
 # Histogram of Trace Lengths
 #########################################
-'''
+
 # x-axis cut off for better visulasation
 if logName == 'BPIC 2017':
     maxLength = 100
@@ -553,4 +517,3 @@ plt.savefig("pdf/" + logName + "/Histogram/" + str(numberOfLogs[-1]) + ".pdf", f
 plt.savefig("png/" + logName + "/Histogram/" + str(numberOfLogs[-1]) + ".png", format="png", dpi=300,
             transparent=True)
 plt.show()
-'''
